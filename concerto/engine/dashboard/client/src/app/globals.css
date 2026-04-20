@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0c;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  overflow: hidden;
+}
+
+/* Custom Scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animations */
+@keyframes launch {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-10px) scale(0.95); opacity: 0.8; }
+  100% { transform: translateY(-100px) scale(0.8); opacity: 0; }
+}
+
+.animate-launch {
+  animation: launch 1.5s ease-in forwards;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Text styles */
+.text-dim {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Premium Components */
+.card-premium {
+  @apply bg-[#0d0d0f] border border-white/5 rounded-2xl transition-all hover:border-blue-500/30 hover:bg-white/[0.02] shadow-sm hover:shadow-blue-500/5;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded-lg;
+}
+
+.gradient-icon {
+  @apply bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/20;
+}
+
+.tag-premium {
+  @apply px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fadeIn 0.4s ease-out forwards;
+}

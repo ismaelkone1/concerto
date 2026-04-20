@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CONCERTO — Project Cockpit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #080810;
+      --bg1:       #0d0d1a;
+      --bg2:       #111124;
+      --border:    rgba(255,255,255,0.06);
+      --blue:      #3d7eff;
+      --blue-dim:  rgba(61,126,255,0.12);
+      --blue-glow: rgba(61,126,255,0.25);
+      --cyan:      #22d3ee;
+      --green:     #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
+      --yellow:    #eab308;
+      --orange:    #f97316;
+      --red:       #ef4444;
+      --purple:    #a855f7;
+      --text:      #e2e8f0;
+      --text2:     #94a3b8;
+      --text3:     #475569;
+      --mono:      'JetBrains Mono', monospace;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #222; border-radius: 99px; }
+
+    /* ─── LAYOUT ─────────────────────────────────────── */
+    #root { display: flex; flex-direction: column; height: 100vh; }
+
+    .topbar {
+      height: 52px; min-height: 52px;
+      background: var(--bg1);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 20px; gap: 32px;
+      position: relative; z-index: 10;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .brand-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #3d7eff, #a855f7);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 14px; color: white;
+      box-shadow: 0 0 16px rgba(61,126,255,0.4);
+    }
+    .brand-name {
+      font-size: 13px; font-weight: 800; letter-spacing: 0.18em;
+      color: white; font-style: italic;
+    }
+
+    .phase-nav {
+      display: flex; gap: 2px; flex: 1;
+    }
+    .phase-btn {
+      padding: 6px 14px;
+      border: none; background: transparent; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      border-radius: 6px;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap-6px;
+      position: relative;
+    }
+    .phase-btn:hover { color: var(--text2); background: rgba(255,255,255,0.04); }
+    .phase-btn.active { color: var(--blue); background: var(--blue-dim); }
+    .phase-btn.active::after {
+      content: ''; position: absolute;
+      bottom: -1px; left: 12px; right: 12px; height: 2px;
+      background: var(--blue);
+      border-radius: 2px 2px 0 0;
+      box-shadow: 0 0 8px var(--blue);
+    }
+    .phase-num {
+      width: 16px; height: 16px; border-radius: 4px;
+      background: rgba(255,255,255,0.06);
+      font-size: 8px; font-weight: 800;
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-right: 6px;
+    }
+    .phase-btn.active .phase-num { background: var(--blue-dim); color: var(--blue); }
+
+    .topbar-right {
+      display: flex; align-items: center; gap: 12px; margin-left: auto;
+    }
+    .status-pill {
+      display: flex; align-items: center; gap-6px;
+      padding: 4px 10px; border-radius: 99px;
+      border: 1px solid;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ─── LEFT MAESTRO RAIL ──────────────────────────── */
+    .maestro-rail {
+      width: 220px; min-width: 220px;
+      background: var(--bg1);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .rail-section { padding: 16px; }
+    .rail-label {
+      font-size: 8px; font-weight: 800; letter-spacing: 0.2em;
+      color: var(--text3); text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .maestro-btn {
+      width: 100%; padding: 10px 14px;
+      border: 1px solid; border-radius: 10px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; text-align: left;
+      transition: all 0.2s; margin-bottom: 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .maestro-btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--blue); border-color: transparent;
+      color: white; box-shadow: 0 0 20px rgba(61,126,255,0.3);
+    }
+    .btn-primary:hover { background: #5591ff; box-shadow: 0 0 28px rgba(61,126,255,0.5); }
+    .btn-ghost {
+      background: transparent; border-color: var(--border);
+      color: var(--text2);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+    .btn-purple {
+      background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.2);
+      color: var(--purple);
+    }
+    .btn-purple:hover { background: rgba(168,85,247,0.2); }
+
+    .pipeline-stages { display: flex; flex-direction: column; gap: 4px; }
+    .stage {
+      padding: 10px 12px; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.01);
+      display: flex; align-items: center; justify-content: space-between;
+      opacity: 0.35; transition: all 0.3s;
+    }
+    .stage.running {
+      opacity: 1;
+      background: rgba(61,126,255,0.08);
+      border-color: rgba(61,126,255,0.3);
+      box-shadow: 0 0 20px rgba(61,126,255,0.1);
+    }
+    .stage-name { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: var(--text2); }
+    .stage.running .stage-name { color: var(--blue); }
+    .stage-bars { display: flex; gap: 2px; align-items: flex-end; }
+    .stage-bar { width: 3px; border-radius: 2px; background: var(--blue); }
+
+    .rail-divider { height: 1px; background: var(--border); margin: 0 16px; }
+
+    /* ─── MAIN CONTENT ────────────────────────────────── */
+    .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* ─── LOG CONSOLE ─────────────────────────────────── */
+    .console-panel {
+      height: 160px; min-height: 160px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .console-header {
+      height: 32px; min-height: 32px;
+      display: flex; align-items: center;
+      padding: 0 16px; gap: 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg1);
+    }
+    .console-title { font-size: 9px; font-weight: 800; letter-spacing: 0.18em; color: var(--text3); text-transform: uppercase; }
+    .console-body {
+      flex: 1; overflow-y: auto; padding: 8px 16px;
+      font-family: var(--mono); font-size: 10px; line-height: 1.7;
+    }
+    .log-line { display: block; white-space: pre; }
+    .log-ok { color: var(--green); }
+    .log-err { color: var(--red); }
+    .log-head { color: var(--blue); font-weight: 700; }
+    .log-dim { color: var(--text3); }
+
+    /* ─── PHASE VIEWS ─────────────────────────────────── */
+    .phase-view { flex: 1; overflow-y: auto; padding: 24px; }
+
+    .view-header { margin-bottom: 24px; }
+    .view-title { font-size: 20px; font-weight: 800; color: white; margin-bottom: 4px; }
+    .view-sub { font-size: 12px; color: var(--text2); }
+
+    /* ─── CARDS GRID ──────────────────────────────────── */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px;
+    }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .card-title { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: var(--text3); text-transform: uppercase; }
+    .card-icon { font-size: 18px; }
+    .card-wide { grid-column: 1 / -1; }
+
+    /* ─── STAT NUMBERS ────────────────────────────────── */
+    .stat-big { font-size: 32px; font-weight: 900; color: white; }
+    .stat-label { font-size: 10px; color: var(--text2); margin-top: 2px; }
+    .stat-row { display: flex; gap: 24px; margin-top: 12px; }
+    .stat-item { display: flex; flex-direction: column; }
+    .stat-value { font-size: 18px; font-weight: 800; }
+    .stat-key { font-size: 9px; color: var(--text3); margin-top: 2px; }
+
+    /* ─── ROADMAP TABLE ────────────────────────────────── */
+    .sprint-block { margin-bottom: 16px; }
+    .sprint-header {
+      display: flex; align-items: center; gap-10px;
+      padding: 10px 14px 10px 14px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+    }
+    .sprint-id { font-size: 9px; font-weight: 800; letter-spacing: 0.12em; color: var(--blue); text-transform: uppercase; margin-right: 10px; }
+    .sprint-title { font-size: 12px; font-weight: 600; color: var(--text); }
+    .sprint-badge {
+      margin-left: auto; padding: 2px 8px; border-radius: 99px;
+      font-size: 8px; font-weight: 800; letter-spacing: 0.08em;
+    }
+    .badge-done { background: var(--green-dim); color: var(--green); }
+    .badge-inprogress { background: var(--blue-dim); color: var(--blue); }
+    .badge-todo { background: rgba(255,255,255,0.04); color: var(--text3); }
+    .sprint-tasks { border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; overflow: hidden; }
+    .task-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .task-row:last-child { border-bottom: none; }
+    .task-id { font-size: 8px; font-weight: 800; letter-spacing: 0.1em; color: var(--text3); min-width: 80px; }
+    .task-title { flex: 1; color: var(--text2); }
+    .task-status-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* ─── TAGS ─────────────────────────────────────────── */
+    .tech-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 6px;
+      font-size: 10px; font-weight: 700;
+      border: 1px solid var(--border);
+      margin: 3px;
+    }
+
+    /* ─── GIT ──────────────────────────────────────────── */
+    .git-change { display: flex; gap: 8px; padding: 4px 0; font-size: 11px; font-family: var(--mono); }
+    .git-flag { font-weight: 800; font-size: 9px; padding: 1px 5px; border-radius: 4px; }
+    .flag-M { background: rgba(234,179,8,0.15); color: var(--yellow); }
+    .flag-A { background: rgba(34,197,94,0.15); color: var(--green); }
+    .flag-D { background: rgba(239,68,68,0.15); color: var(--red); }
+    .flag-? { background: rgba(148,163,184,0.1); color: var(--text3); }
+
+    .commit-row { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+    .commit-row:last-child { border-bottom: none; }
+    .commit-hash { font-family: var(--mono); font-size: 10px; color: var(--blue); min-width: 54px; }
+    .commit-msg { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ─── DOCKER ───────────────────────────────────────── */
+    .service-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+    }
+    .service-row:last-child { border-bottom: none; }
+    .service-name { font-size: 11px; font-weight: 600; flex: 1; }
+    .service-status { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; }
+
+    /* ─── SECURITY ─────────────────────────────────────── */
+    .sec-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .sec-row:last-child { border-bottom: none; }
+    .sec-file { font-family: var(--mono); font-size: 10px; color: var(--text2); flex: 1; }
+    .sec-keys { font-size: 9px; color: var(--text3); }
+    .shield { font-size: 14px; }
+
+    /* ─── PROGRESS BAR ─────────────────────────────────── */
+    .prog-bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; margin-top: 8px; }
+    .prog-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+
+    /* ─── INLINE COLS ──────────────────────────────────── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .col-span-2 { grid-column: span 2; }
+
+    /* ─── PHASE HERO HEADER ────────────────────────────── */
+    .phase-hero {
+      background: linear-gradient(120deg, var(--bg2) 60%, rgba(61,126,255,0.06));
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px 28px;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .phase-hero-icon { font-size: 36px; }
+    .phase-hero-title { font-size: 22px; font-weight: 900; color: white; }
+    .phase-hero-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+    /* ─── EMPTY STATE ──────────────────────────────────── */
+    .empty { display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 200px; color: var(--text3); gap: 8px; }
+    .empty-icon { font-size: 32px; opacity: 0.4; }
+    .empty-msg { font-size: 12px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+const api = (url) => fetch(url).then(r => r.json()).catch(() => null);
+
+function StatusPill({ connected }) {
+  return (
+    <div className="status-pill" style={{
+      borderColor: connected ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)',
+      background: connected ? 'rgba(34,197,94,0.07)' : 'rgba(239,68,68,0.07)',
+      color: connected ? '#22c55e' : '#ef4444',
+      gap: '6px'
+    }}>
+      <div className={`status-dot ${connected ? 'pulse' : ''}`}
+        style={{ background: connected ? '#22c55e' : '#ef4444' }}/>
+      {connected ? 'CONNECTÉ' : 'HORS LIGNE'}
+    </div>
+  );
+}
+
+function Badge({ status }) {
+  const s = (status || '').toLowerCase();
+  const cls = s.includes('done') || s.includes('terminé') ? 'badge-done'
+    : s.includes('progress') || s.includes('cours') ? 'badge-inprogress'
+    : 'badge-todo';
+  return <span className={`sprint-badge ${cls}`}>{status || 'ToDo'}</span>;
+}
+
+function TaskDot({ status }) {
+  const s = (status || '').toLowerCase();
+  const color = s.includes('done') || s.includes('terminé') ? '#22c55e'
+    : s.includes('progress') || s.includes('cours') ? '#3d7eff'
+    : '#475569';
+  return <div className="task-status-dot" style={{ background: color }}/>;
+}
+
+// ─── PHASE: CONCEPTION ───────────────────────────────────────────────────────
+function ConceptionView() {
+  const [roadmap, setRoadmap] = useState(null);
+  const [open, setOpen] = useState(new Set());
+
+  useEffect(() => {
+    api('/api/roadmap').then(d => {
+      setRoadmap(d);
+      if (d && d[0]) setOpen(new Set([d[0].id]));
+    });
+  }, []);
+
+  if (!roadmap) return <div className="empty"><div className="empty-icon">📋</div><div className="empty-msg">Chargement de la roadmap…</div></div>;
+  if (roadmap.error) return <div className="empty"><div className="empty-icon">⚠️</div><div className="empty-msg">{roadmap.error}</div></div>;
+
+  const total = roadmap.reduce((s, sp) => s + sp.tasks.length, 0);
+  const done = roadmap.reduce((s, sp) => s + sp.tasks.filter(t => t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('terminé')).length, 0);
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  return (
+    <div className="phase-view">
+      <div className="phase-hero">
+        <div className="phase-hero-icon">🗺️</div>
+        <div>
+          <div className="phase-hero-title">Conception & Roadmap</div>
+          <div className="phase-hero-sub">Vision produit, sprints, sous-sprints et progression globale</div>
+        </div>
+        <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+          <div className="stat-big">{pct}%</div>
+          <div className="stat-label">{done}/{total} tâches complètes</div>
+          <div className="prog-bar" style={{ width: 120, marginTop: 8 }}>
+            <div className="prog-fill" style={{ width: `${pct}%`, background: 'var(--blue)' }}/>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        {roadmap.map(sp => (
+          <div key={sp.id} style={{
+            padding: '6px 14px', borderRadius: 8,
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            fontSize: 10, fontWeight: 700, color: 'var(--text2)'
+          }}>
+            <span style={{ color: 'var(--blue)', marginRight: 6 }}>{sp.id}</span>
+            <Badge status={sp.status}/>
+          </div>
+        ))}
+      </div>
+
+      {roadmap.map(sprint => {
+        const isOpen = open.has(sprint.id);
+        const toggle = () => setOpen(prev => {
+          const n = new Set(prev);
+          n.has(sprint.id) ? n.delete(sprint.id) : n.add(sprint.id);
+          return n;
+        });
+        return (
+          <div key={sprint.id} className="sprint-block">
+            <div className="sprint-header" onClick={toggle}>
+              <span className="sprint-id">{sprint.id}</span>
+              <span className="sprint-title">{sprint.title}</span>
+              <Badge status={sprint.status}/>
+              <span style={{ marginLeft: 10, color: 'var(--text3)', fontSize: 12 }}>{isOpen ? '▲' : '▼'}</span>
+            </div>
+            {isOpen && (
+              <div className="sprint-tasks">
+                {sprint.tasks.length === 0 && (
+                  <div style={{ padding: 12, fontSize: 11, color: 'var(--text3)' }}>Aucune sous-tâche définie</div>
+                )}
+                {sprint.tasks.map(task => (
+                  <div key={task.id} className="task-row">
+                    <TaskDot status={task.status}/>
+                    <span className="task-id">{task.id}</span>
+                    <span className="task-title">{task.title}</span>
+                    <Badge status={task.status}/>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── PHASE: DEV ─────────────────────────────────────────────────────────────
+function DevView({ activePipeline, onRun }) {
+  const [git, setGit] = useState(null);
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    api('/api/git').then(setGit);
+    api('/api/stats').then(setStats);
+  }, []);
+
+  const totalFiles = stats ? Object.values(stats).reduce((a, b) => a + b, 0) : 0;
+
+  return (
+    <div className="phase-view">
+      <div className="phase-hero">
+        <div className="phase-hero-icon">⚡</div>
+        <div>
+          <div className="phase-hero-title">Développement</div>
+          <div className="phase-hero-sub">Contrôle de l'orchestrateur IA, progression et état Git</div>
+        </div>
+        {git && (
+          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Branche active</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cyan)', fontFamily: 'var(--mono)' }}>
+              ⎇ {git.branch}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>
+              {git.changes.length} modification{git.changes.length !== 1 ? 's' : ''} en cours
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="two-col" style={{ marginBottom: 16 }}>
+        {/* Stack technique */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Stack Technique</span>
+            <span className="card-icon">🏗️</span>
+          </div>
+          {stats ? (
+            <>
+              <div className="stat-big" style={{ fontSize: 24 }}>{totalFiles}</div>
+              <div className="stat-label">fichiers sources totaux</div>
+              <div className="stat-row" style={{ flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {[
+                  { lang: 'TypeScript', count: stats.ts + stats.tsx, color: '#3178c6' },
+                  { lang: 'JavaScript', count: stats.js, color: '#f7df1e' },
+                  { lang: 'PHP', count: stats.php, color: '#8892be' },
+                  { lang: 'YAML', count: stats.yaml, color: '#f97316' },
+                ].map(({ lang, count, color }) => count > 0 && (
+                  <div key={lang} className="tech-tag" style={{ borderColor: `${color}33` }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: color }}/>
+                    <span style={{ color, fontWeight: 700 }}>{lang}</span>
+                    <span style={{ color: 'var(--text3)' }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : <div style={{ color: 'var(--text3)', fontSize: 11 }}>Calcul en cours…</div>}
+        </div>
+
+        {/* Pipeline IA */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Orchestrateur IA</span>
+            <span className="card-icon">🤖</span>
+          </div>
+          <div className="pipeline-stages">
+            {['BE_DEV', 'BE_QA', 'FE_VERIF', 'FE_DEV'].map(stage => {
+              const isRunning = activePipeline === stage;
+              return (
+                <div key={stage} className={`stage ${isRunning ? 'running' : ''}`}>
+                  <span className="stage-name">{stage}</span>
+                  {isRunning && (
+                    <div className="stage-bars">
+                      {[12, 20, 14, 22, 10].map((h, i) => (
+                        <div key={i} className="stage-bar" style={{
+                          height: h, animationDelay: `${i * 0.12}s`,
+                          animation: 'bounce 0.8s ease-in-out infinite alternate'
+                        }}/>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <style>{`@keyframes bounce { from { transform: scaleY(0.5); } to { transform: scaleY(1); } }`}</style>
+        </div>
+      </div>
+
+      {git && (
+        <div className="two-col">
+          {/* Changements Git */}
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Modifications Git</span>
+              <span className="card-icon">📝</span>
+            </div>
+            {git.changes.length === 0 ? (
+              <div style={{ fontSize: 11, color: 'var(--green)' }}>✅ Répertoire de travail propre</div>
+            ) : git.changes.slice(0, 8).map((c, i) => {
+              const flagClass = c.flag.includes('M') ? 'flag-M' : c.flag.includes('A') ? 'flag-A' : c.flag.includes('D') ? 'flag-D' : 'flag-?';
+              return (
+                <div key={i} className="git-change">
+                  <span className={`git-flag ${flagClass}`}>{c.flag || '?'}</span>
+                  <span style={{ color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.file}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Commits récents */}
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Commits Récents</span>
+              <span className="card-icon">🔖</span>
+            </div>
+            {git.commits.map((c, i) => (
+              <div key={i} className="commit-row">
+                <span className="commit-hash">{c.hash}</span>
+                <span className="commit-msg" title={c.msg}>{c.msg}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PHASE: TESTS ────────────────────────────────────────────────────────────
+function TestsView() {
+  const [tests, setTests] = useState(null);
+
+  useEffect(() => { api('/api/tests').then(setTests); }, []);
+
+  return (
+    <div className="phase-view">
+      <div className="phase-hero">
+        <div className="phase-hero-icon">🧪</div>
+        <div>
+          <div className="phase-hero-title">Tests & Qualité</div>
+          <div className="phase-hero-sub">E2E Cypress, tests unitaires, couverture de code</div>
+        </div>
+      </div>
+
+      <div className="three-col" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <div className="card-header"><span className="card-title">Tests E2E</span><span className="card-icon">🔄</span></div>
+          <div className="stat-big">{tests?.e2e?.files ?? '—'}</div>
+          <div className="stat-label">fichiers Cypress (.cy.ts)</div>
+          <div className="prog-bar"><div className="prog-fill" style={{ width: '60%', background: 'var(--cyan)' }}/></div>
+        </div>
+        <div className="card">
+          <div className="card-header"><span className="card-title">Tests Unitaires</span><span className="card-icon">⚙️</span></div>
+          <div className="stat-big">{tests?.unit?.files ?? '—'}</div>
+          <div className="stat-label">fichiers spec/test</div>
+          <div className="prog-bar"><div className="prog-fill" style={{ width: '30%', background: 'var(--purple)' }}/></div>
+        </div>
+        <div className="card">
+          <div className="card-header"><span className="card-title">Couverture</span><span className="card-icon">📊</span></div>
+          <div className="stat-big" style={{ color: 'var(--yellow)' }}>–</div>
+          <div className="stat-label">Lancer les tests pour mesurer</div>
+          <div className="prog-bar"><div className="prog-fill" style={{ width: '0%', background: 'var(--yellow)' }}/></div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Actions</span></div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {[
+            { label: '▶ Lancer Cypress E2E', color: 'var(--cyan)', bg: 'rgba(34,211,238,0.1)', border: 'rgba(34,211,238,0.2)' },
+            { label: '▶ Lancer Tests Unitaires', color: 'var(--purple)', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.2)' },
+            { label: '📋 Voir Rapport', color: 'var(--text2)', bg: 'rgba(255,255,255,0.03)', border: 'var(--border)' },
+          ].map(({ label, color, bg, border }) => (
+            <button key={label} className="maestro-btn" style={{ color, background: bg, borderColor: border, flex: 1, justifyContent: 'center' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PHASE: SECURITE ─────────────────────────────────────────────────────────
+function SecurityView() {
+  const [sec, setSec] = useState(null);
+
+  useEffect(() => { api('/api/security').then(setSec); }, []);
+
+  if (!sec) return <div className="empty"><div className="empty-icon">🔐</div><div className="empty-msg">Audit en cours…</div></div>;
+
+  const allProtected = sec.gitignoreProtection?.every(f => f.protected);
+
+  return (
+    <div className="phase-view">
+      <div className="phase-hero">
+        <div className="phase-hero-icon">🔐</div>
+        <div>
+          <div className="phase-hero-title">Sécurité</div>
+          <div className="phase-hero-sub">Audit des fichiers secrets, protection .gitignore, exposition des endpoints</div>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color: allProtected ? 'var(--green)' : 'var(--yellow)' }}>
+            {allProtected ? '✅ SÉCURISÉ' : '⚠️ ATTENTION'}
+          </div>
+        </div>
+      </div>
+
+      <div className="two-col">
+        <div className="card">
+          <div className="card-header"><span className="card-title">Fichiers Env Détectés</span><span className="card-icon">📄</span></div>
+          {sec.envFiles.map((f, i) => (
+            <div key={i} className="sec-row">
+              <span className="shield">{f.exists ? '📋' : '—'}</span>
+              <span className="sec-file">{f.file}</span>
+              {f.exists && <span className="sec-keys">{f.keys.length} clés</span>}
+              {!f.exists && <span style={{ fontSize: 9, color: 'var(--text3)' }}>absent</span>}
+            </div>
+          ))}
+        </div>
+
+        <div className="card">
+          <div className="card-header"><span className="card-title">Protection .gitignore</span><span className="card-icon">🛡️</span></div>
+          {sec.gitignoreProtection.map((f, i) => (
+            <div key={i} className="sec-row">
+              <span style={{ fontSize: 14 }}>{f.protected ? '✅' : '❌'}</span>
+              <span className="sec-file">{f.file}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: f.protected ? 'var(--green)' : 'var(--red)' }}>
+                {f.protected ? 'PROTÉGÉ' : 'EXPOSÉ'}
+              </span>
+            </div>
+          ))}
+          {!allProtected && (
+            <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, fontSize: 11, color: 'var(--red)' }}>
+              ⚠️ Certains fichiers secrets ne sont pas dans .gitignore
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PHASE: DÉPLOIEMENT ───────────────────────────────────────────────────────
+function DeployView() {
+  const [services, setServices] = useState(null);
+
+  useEffect(() => { api('/api/docker').then(setServices); }, []);
+
+  return (
+    <div className="phase-view">
+      <div className="phase-hero">
+        <div className="phase-hero-icon">🚀</div>
+        <div>
+          <div className="phase-hero-title">Déploiement</div>
+          <div className="phase-hero-sub">Services Docker, CI/CD, historique des releases</div>
+        </div>
+      </div>
+
+      <div className="cards-grid">
+        <div className="card card-wide">
+          <div className="card-header">
+            <span className="card-title">Services Docker Compose</span>
+            <span className="card-icon">🐳</span>
+          </div>
+          {(!services || services.length === 0) ? (
+            <div style={{ color: 'var(--text3)', fontSize: 11 }}>Aucun service détecté — docker compose non actif</div>
+          ) : (
+            services.map((s, i) => {
+              const name = s.Name || s.Service || s.name || `Service ${i+1}`;
+              const state = (s.State || s.Status || s.state || 'unknown').toLowerCase();
+              const isRunning = state.includes('running') || state.includes('up');
+              const color = isRunning ? 'var(--green)' : state === 'unknown' ? 'var(--text3)' : 'var(--red)';
+              return (
+                <div key={i} className="service-row">
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }}/>
+                  <span className="service-name">{name}</span>
+                  <span className="service-status" style={{ color }}>{s.State || s.Status || 'UNKNOWN'}</span>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-header"><span className="card-title">Actions Deploy</span></div>
+          {[
+            '▶ docker compose up -d',
+            '⏹ docker compose down',
+            '🔄 Rebuild & Up',
+            '📋 Voir les Logs'
+          ].map(a => (
+            <button key={a} className="maestro-btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontFamily: 'var(--mono)', fontSize: 10 }}>
+              {a}
+            </button>
+          ))}
+        </div>
+
+        <div className="card">
+          <div className="card-header"><span className="card-title">Environnements</span></div>
+          {[
+            { env: 'LOCAL', status: '🟢 Actif', color: 'var(--green)' },
+            { env: 'STAGING', status: '⚪ Non configuré', color: 'var(--text3)' },
+            { env: 'PRODUCTION', status: '⚪ Non configuré', color: 'var(--text3)' },
+          ].map(({ env, status, color }) => (
+            <div key={env} className="service-row">
+              <span className="service-name" style={{ color }}>{env}</span>
+              <span style={{ fontSize: 10, color }}>{status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PHASE: MAINTENANCE ──────────────────────────────────────────────────────
+function MaintenanceView({ logs }) {
+  const categories = [
+    { icon: '✅', label: 'OK', count: (logs.match(/✅/g) || []).length, color: 'var(--green)' },
+    { icon: '❌', label: 'Erreurs', count: (logs.match(/❌/g) || []).length, color: 'var(--red)' },
+    { icon: '──', label: 'Phases', count: (logs.match(/──/g) || []).length / 2, color: 'var(--blue)' },
+  ];
+
+  return (
+    <div className="phase-view">
+      <div className="phase-hero">
+        <div className="phase-hero-icon">🔧</div>
+        <div>
+          <div className="phase-hero-title">Maintenance & Monitoring</div>
+          <div className="phase-hero-sub">Logs en temps réel, alertes, santé du système</div>
+        </div>
+      </div>
+
+      <div className="three-col" style={{ marginBottom: 20 }}>
+        {categories.map(({ icon, label, count, color }) => (
+          <div key={label} className="card" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
+            <div className="stat-big" style={{ color }}>{Math.floor(count)}</div>
+            <div className="stat-label">{label} dans les logs</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Log Complet — Orchestrateur</span>
+          <span style={{ fontSize: 9, color: 'var(--text3)' }}>concerto.log</span>
+        </div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, maxHeight: 280, overflowY: 'auto', lineHeight: 1.7 }}>
+          {logs ? logs.split('\n').map((line, i) => {
+            const cls = line.includes('✅') ? 'log-ok' : line.includes('❌') ? 'log-err' : line.includes('──') ? 'log-head' : 'log-dim';
+            return <span key={i} className={`log-line ${cls}`}>{line + '\n'}</span>;
+          }) : <span className="log-dim">Aucun log disponible — lancer l'orchestrateur.</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PHASE: COMMANDES IA ──────────────────────────────────────────────────────
+function CommandesView({ onRun }) {
+  const [selectedCommand, setSelectedCommand] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [results, setResults] = useState(null);
+
+  const commands = [
+    { id: 'review_be', label: 'Review Backend', icon: '🔍', desc: 'Audit du code backend pour qualité et conformité.' },
+    { id: 'review_fe', label: 'Review Frontend', icon: '🎨', desc: 'Audit du code frontend pour UX et performance.' },
+    { id: 'audit_security', label: 'Audit Sécurité', icon: '🔐', desc: 'Vérification des vulnérabilités et bonnes pratiques.' },
+    { id: 'fix_bug', label: 'Corriger Bug', icon: '🐛', desc: 'Résoudre un bug spécifique avec contexte détaillé.' },
+    { id: 'optimize_perf', label: 'Optimiser Performance', icon: '⚡', desc: 'Améliorer les performances d\'un composant.' },
+    { id: 'generate_docs', label: 'Générer Docs', icon: '📚', desc: 'Créer documentation pour une feature.' },
+  ];
+
+  const handleSubmit = () => {
+    // Validation : champs obligatoires
+    const required = ['scope', 'context', 'criteria'];
+    const missing = required.filter(f => !formData[f]);
+    if (missing.length) {
+      alert(`Champs obligatoires manquants : ${missing.join(', ')}`);
+      return;
+    }
+    onRun({ command: selectedCommand.id, ...formData });
+    setResults({ status: 'running', message: 'Commande en cours...' });
+  };
+
+  const handleVerify = () => {
+    setResults({ ...results, status: 'verifying', message: 'Vérification en cours...' });
+    // Ici, on pourrait appeler une API pour re-run avec feedback
+  };
+
+  const handleRecadre = (feedback) => {
+    setFormData({ ...formData, feedback });
+    setResults({ ...results, status: 'recadrage', message: 'Recadrage appliqué.' });
+  };
+
+  return (
+    <div className="phase-view">
+      <div className="phase-hero">
+        <div className="phase-hero-icon">🤖</div>
+        <div>
+          <div className="phase-hero-title">Commandes IA Spécialisées</div>
+          <div className="phase-hero-sub">Actions précises pour optimiser l'IA et réduire les hallucinations</div>
+        </div>
+      </div>
+
+      {!selectedCommand ? (
+        <div className="cards-grid">
+          {commands.map(cmd => (
+            <div key={cmd.id} className="card" onClick={() => setSelectedCommand(cmd)} style={{ cursor: 'pointer' }}>
+              <div className="card-header">
+                <span className="card-title">{cmd.icon} {cmd.label}</span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text2)', margin: 0 }}>{cmd.desc}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div>
+          <button onClick={() => setSelectedCommand(null)} style={{ marginBottom: 20, background: 'var(--blue)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 6 }}>← Retour</button>
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">{selectedCommand.icon} {selectedCommand.label}</span>
+            </div>
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Scope (obligatoire)*</label>
+                <select value={formData.scope || ''} onChange={e => setFormData({ ...formData, scope: e.target.value })} style={{ width: '100%', padding: 8, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, color: 'white' }}>
+                  <option value="">Sélectionner...</option>
+                  <option value="sprint-actuel">Sprint Actuel</option>
+                  <option value="tout-projet">Tout le Projet</option>
+                  <option value="feature-specifique">Feature Spécifique</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Contexte Détaillé (obligatoire)*</label>
+                <textarea value={formData.context || ''} onChange={e => setFormData({ ...formData, context: e.target.value })} placeholder="Décrivez le contexte, stack, erreurs observées, etc." style={{ width: '100%', height: 80, padding: 8, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, color: 'white', resize: 'vertical' }}/>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Critères d'Évaluation (obligatoire)*</label>
+                <textarea value={formData.criteria || ''} onChange={e => setFormData({ ...formData, criteria: e.target.value })} placeholder="Quoi vérifier ? (e.g., conformité Clean Arch, sécurité JWT)" style={{ width: '100%', height: 60, padding: 8, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, color: 'white', resize: 'vertical' }}/>
+              </div>
+              <button onClick={handleSubmit} style={{ background: 'var(--green)', color: 'white', border: 'none', padding: '12px', borderRadius: 6, fontWeight: 700 }}>Lancer Commande</button>
+            </div>
+          </div>
+
+          {results && (
+            <div className="card" style={{ marginTop: 20 }}>
+              <div className="card-header">
+                <span className="card-title">Résultats</span>
+              </div>
+              <p style={{ fontSize: 12, color: results.status === 'running' ? 'var(--blue)' : results.status === 'success' ? 'var(--green)' : 'var(--red)' }}>{results.message}</p>
+              {results.status === 'success' && (
+                <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                  <button onClick={handleVerify} style={{ background: 'var(--blue)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 6 }}>Vérifier Réalité</button>
+                  <button onClick={() => handleRecadre(prompt('Feedback pour recadrer l\'IA :'))} style={{ background: 'var(--orange)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 6 }}>Recadrer IA</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+const PHASES = [
+  { id: 'conception', label: 'Conception', num: '01', icon: '🗺️' },
+  { id: 'dev',        label: 'Dev',         num: '02', icon: '⚡' },
+  { id: 'tests',      label: 'Tests',       num: '03', icon: '🧪' },
+  { id: 'security',   label: 'Sécurité',    num: '04', icon: '🔐' },
+  { id: 'deploy',     label: 'Deploy',      num: '05', icon: '🚀' },
+  { id: 'maintenance',label: 'Maintenance', num: '06', icon: '🔧' },
+  { id: 'commandes',  label: 'Commandes IA', num: '07', icon: '🤖' },
+];
+
+function App() {
+  const [phase, setPhase] = useState('conception');
+  const [logs, setLogs] = useState('');
+  const [connected, setConnected] = useState(false);
+  const [activePipeline, setActivePipeline] = useState('IDLE');
+  const logRef = useRef(null);
+
+  // SSE Logs
+  useEffect(() => {
+    const es = new EventSource('/logs');
+    es.onopen = () => setConnected(true);
+    es.onerror = () => setConnected(false);
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      setLogs(data);
+      const ms = data.match(/── Movement: (\w+) ──/g);
+      if (ms) setActivePipeline(ms[ms.length - 1].replace(/── Movement: | ──/g, ''));
+    };
+    return () => es.close();
+  }, []);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logs]);
+
+  const triggerAction = (action) => fetch('/api/run', { method: 'POST', body: JSON.stringify({ action }) });
+
+  return (
+    <>
+      {/* ── TOP BAR ── */}
+      <div className="topbar">
+        <div className="brand">
+          <div className="brand-icon">C</div>
+          <div className="brand-name">CONCERTO</div>
+        </div>
+
+        <div className="phase-nav">
+          {PHASES.map(p => (
+            <button
+              key={p.id}
+              className={`phase-btn ${phase === p.id ? 'active' : ''}`}
+              onClick={() => setPhase(p.id)}
+            >
+              <span className="phase-num">{p.num}</span>
+              {p.icon} {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="topbar-right">
+          <StatusPill connected={connected}/>
+        </div>
+      </div>
+
+      {/* ── MAIN ── */}
+      <div className="main">
+        {/* ── MAESTRO RAIL ── */}
+        <div className="maestro-rail">
+          <div className="rail-section">
+            <div className="rail-label">Orchestrateur</div>
+            <button className="maestro-btn btn-primary" onClick={() => triggerAction('START')}>
+              <span>▶ Lancer</span>
+              <span style={{ fontSize: 14 }}>🎼</span>
+            </button>
+            <button className="maestro-btn btn-ghost" onClick={() => triggerAction('REVIEW_BE')}>
+              <span>Review Backend</span>
+              <span>→</span>
+            </button>
+            <button className="maestro-btn btn-ghost" onClick={() => triggerAction('REVIEW_FE')}>
+              <span>Review Frontend</span>
+              <span>→</span>
+            </button>
+            <button className="maestro-btn btn-ghost" onClick={() => triggerAction('AUDIT_SECURITY')}>
+              <span>Audit Sécurité</span>
+              <span>🔐</span>
+            </button>
+            <button className="maestro-btn btn-ghost" onClick={() => triggerAction('FIX_BUG')}>
+              <span>Corriger Bug</span>
+              <span>🐛</span>
+            </button>
+            <button className="maestro-btn btn-ghost" onClick={() => triggerAction('OPTIMIZE_PERF')}>
+              <span>Optimiser Perf</span>
+              <span>⚡</span>
+            </button>
+            <button className="maestro-btn btn-ghost" onClick={() => triggerAction('STATUS')}>
+              <span>Vérifier Statut</span>
+              <span>⟳</span>
+            </button>
+          </div>
+
+          <div className="rail-divider"/>
+
+          <div className="rail-section" style={{ flex: 1 }}>
+            <div className="rail-label">Pipeline Actif</div>
+            <div className="pipeline-stages">
+              {['BE_DEV', 'BE_QA', 'FE_VERIF', 'FE_DEV'].map(stage => {
+                const isRunning = activePipeline === stage;
+                return (
+                  <div key={stage} className={`stage ${isRunning ? 'running' : ''}`}>
+                    <span className="stage-name">{stage}</span>
+                    {isRunning && (
+                      <div className="stage-bars">
+                        {[10, 18, 12, 20].map((h, i) => (
+                          <div key={i} className="stage-bar" style={{
+                            height: h,
+                            animation: `bounce 0.6s ${i * 0.1}s ease-in-out infinite alternate`
+                          }}/>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rail-divider"/>
+
+          <div className="rail-section">
+            <div className="rail-label">Phase Active</div>
+            <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700 }}>
+              {PHASES.find(p => p.id === phase)?.icon} {PHASES.find(p => p.id === phase)?.label}
+            </div>
+          </div>
+        </div>
+
+        {/* ── CONTENT ── */}
+        <div className="content">
+          {phase === 'conception'  && <ConceptionView/>}
+          {phase === 'dev'         && <DevView activePipeline={activePipeline} onRun={triggerAction}/>}
+          {phase === 'tests'       && <TestsView/>}
+          {phase === 'security'    && <SecurityView/>}
+          {phase === 'deploy'      && <DeployView/>}
+          {phase === 'maintenance' && <MaintenanceView logs={logs}/>}
+          {phase === 'commandes'   && <CommandesView onRun={triggerAction}/>}
+
+          {/* ── LIVE LOG CONSOLE ── */}
+          <div className="console-panel">
+            <div className="console-header">
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: connected ? 'var(--green)' : 'var(--red)', animation: connected ? 'pulse 2s infinite' : 'none' }}/>
+                <span className="console-title">Console Système</span>
+              </div>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+                <button onClick={() => triggerAction('STATUS')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--blue)', fontSize: 9, fontWeight: 800, letterSpacing: '0.12em' }}>
+                  VÉRIFIER
+                </button>
+                <button onClick={() => setLogs('')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 9, fontWeight: 800, letterSpacing: '0.12em' }}>
+                  EFFACER
+                </button>
+              </div>
+            </div>
+            <div className="console-body" ref={logRef}>
+              {logs ? logs.split('\n').slice(-40).map((line, i) => {
+                const cls = line.includes('✅') ? 'log-ok' : line.includes('❌') ? 'log-err' : line.includes('──') ? 'log-head' : 'log-dim';
+                return <span key={i} className={`log-line ${cls}`}>{line + '\n'}</span>;
+              }) : <span className="log-dim">En attente de l'orchestrateur…</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

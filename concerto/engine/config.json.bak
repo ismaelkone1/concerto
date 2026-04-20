@@ -1,0 +1,20 @@
+{
+  "project": "TodoApp",
+  "paths": {
+    "config": "../concerto-config/todo",
+    "rules": "rules",
+    "sprints": "sprints",
+    "contracts": "contracts"
+  },
+  "active_agent_pipeline": [
+    "BE-DEV",
+    "BE-QA",
+    "FE-VERIF",
+    "FE-DEV",
+    "FE-VERIF"
+  ],
+  "monitoring": {
+    "port": 3500,
+    "dashboard_enabled": true
+  }
+}

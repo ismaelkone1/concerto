@@ -1,0 +1,58 @@
+{
+  "endpoints": [
+    {
+      "route": "/api/todos",
+      "method": "GET",
+      "description": "Récupérer toutes les tâches",
+      "response": {
+        "type": "array",
+        "items": {
+          "id": "string",
+          "title": "string",
+          "completed": "boolean",
+          "createdAt": "string"
+        }
+      },
+      "auth": false
+    },
+    {
+      "route": "/api/todos",
+      "method": "POST",
+      "description": "Créer une nouvelle tâche",
+      "payload": {
+        "title": "string",
+        "completed": "boolean (optional, default false)"
+      },
+      "response": {
+        "id": "string",
+        "title": "string",
+        "completed": "boolean",
+        "createdAt": "string"
+      },
+      "auth": false
+    },
+    {
+      "route": "/api/todos/:id",
+      "method": "PUT",
+      "description": "Mettre à jour une tâche",
+      "payload": {
+        "title": "string (optional)",
+        "completed": "boolean (optional)"
+      },
+      "response": {
+        "id": "string",
+        "title": "string",
+        "completed": "boolean",
+        "createdAt": "string"
+      },
+      "auth": false
+    },
+    {
+      "route": "/api/todos/:id",
+      "method": "DELETE",
+      "description": "Supprimer une tâche",
+      "response": { "message": "string" },
+      "auth": false
+    }
+  ]
+}

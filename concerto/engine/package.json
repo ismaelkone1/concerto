@@ -1,0 +1,27 @@
+{
+  "name": "concerto-engine",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "dashboard": "node dashboard/server/server.js",
+    "dry-run": "ts-node src/index.ts --dry-run"
+  },
+  "dependencies": {
+    "axios": "^1.15.0",
+    "dotenv": "^16.6.1",
+    "fs-extra": "^11.3.4",
+    "openai": "^4.104.0",
+    "simple-git": "^3.36.0",
+    "uuid": "^13.0.0",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.5.4"
+  }
+}
