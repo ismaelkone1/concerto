@@ -2,17 +2,13 @@
 
 import { useState } from 'react';
 import { 
-  Rocket, 
   Grid, 
   Layout, 
   Layers, 
   Server, 
   ChevronRight, 
-  ArrowLeft,
   Search,
-  Check,
   Star,
-  Activity,
   Box
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -42,6 +38,8 @@ const TEMPLATES: Template[] = [
   { id: '8', name: 'Python Service Mesh', category: 'microservices', stack: 'FastAPI / gRPC / Redis', desc: 'High-performance Python services with gRPC communication.', complexity: 'High', rating: 4.7 },
 ];
 
+import Sidebar from '@/components/Sidebar';
+
 export default function TemplatesPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Template['category'] | 'all'>('all');
@@ -53,49 +51,23 @@ export default function TemplatesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-white flex">
-      {/* Mini Sidebar */}
-      <aside className="w-20 border-r border-white/5 bg-[#0d0d0f] flex flex-col items-center py-8 gap-8">
-        <button onClick={() => router.push('/')} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-blue-500/10 transition-all text-gray-400 hover:text-blue-400">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="h-px w-8 bg-white/5" />
-        <div className="flex-1 flex flex-col gap-4">
-           <button onClick={() => setActiveTab('all')} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${activeTab === 'all' ? 'bg-blue-600 shadow-xl shadow-blue-600/20' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>
-             <Grid size={22} />
-           </button>
-           <button onClick={() => setActiveTab('monolith')} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${activeTab === 'monolith' ? 'bg-blue-600 shadow-xl shadow-blue-600/20' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>
-             <Layers size={22} />
-           </button>
-           <button onClick={() => setActiveTab('mvc')} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${activeTab === 'mvc' ? 'bg-blue-600 shadow-xl shadow-blue-600/20' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>
-             <Layout size={22} />
-           </button>
-           <button onClick={() => setActiveTab('hexagonal')} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${activeTab === 'hexagonal' ? 'bg-blue-600 shadow-xl shadow-blue-600/20' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>
-             <Box size={22} />
-           </button>
-           <button onClick={() => setActiveTab('microservices')} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${activeTab === 'microservices' ? 'bg-blue-600 shadow-xl shadow-blue-600/20' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>
-             <Server size={22} />
-           </button>
-        </div>
-      </aside>
+    <div className="flex h-screen bg-[#0a0a0c] text-white overflow-hidden">
+      <Sidebar />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-20 border-b border-white/5 px-10 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl">
-           <div>
-              <h1 className="text-2xl font-bold tracking-tight uppercase">Blueprints & Templates</h1>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Start from a proven foundation</p>
-           </div>
+      <main className="flex-1 flex flex-col bg-[#0a0a0c] relative">
+        {/* Header matching Launchpad styling */}
+        <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-10">
+           <h2 className="text-xl font-semibold">Blueprints & Templates</h2>
            
-           <div className="flex items-center gap-6">
+           <div className="flex items-center gap-4">
               <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-400 transition-all font-bold" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
                 <input 
                   type="text"
-                  placeholder="Rechercher un template..."
+                  placeholder="Search templates..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-full pl-12 pr-6 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-80 transition-all font-medium"
+                  className="pl-10 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 w-64 transition-all"
                 />
               </div>
            </div>

@@ -16,7 +16,7 @@
     "fs-extra": "^11.3.4",
     "openai": "^4.104.0",
     "simple-git": "^3.36.0",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.0",
     "yaml": "^2.8.3"
   },
   "devDependencies": {

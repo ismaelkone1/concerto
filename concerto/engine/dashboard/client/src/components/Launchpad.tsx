@@ -3,19 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Rocket, 
+  Rocket,
   Plus, 
-  Settings, 
-  FileSearch, 
   Clock, 
   Layout, 
-  Grid, 
   ChevronRight,
   Search,
   MoreVertical,
   Trash2
 } from 'lucide-react';
 import { apiService } from '@/lib/api';
+import Sidebar from './Sidebar';
 
 interface Project {
   id: string;
@@ -70,7 +68,7 @@ export default function Launchpad() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0a0a0c]">
-        <div className="relative">
+        <div className="relative" suppressHydrationWarning>
           <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
           <Rocket className="absolute inset-0 m-auto w-6 h-6 text-blue-400" />
         </div>
@@ -80,52 +78,7 @@ export default function Launchpad() {
 
   return (
     <div className="flex h-screen bg-[#0a0a0c] text-white overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-white/5 bg-[#0d0d0f] flex flex-col">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Rocket className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-lg tracking-tight">CONCERTO</span>
-        </div>
-
-        <nav className="flex-1 px-3 space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium bg-white/5 text-white rounded-lg transition-colors">
-            <Layout className="w-4 h-4 text-blue-400" />
-            Home
-          </button>
-          <button 
-            onClick={() => router.push('/templates')}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-          >
-            <Grid className="w-4 h-4" />
-            Templates
-          </button>
-          <button 
-            onClick={() => router.push('/configuration')}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Global Settings
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-            <FileSearch className="w-4 h-4" />
-            Audit
-          </button>
-        </nav>
-
-        <div className="p-4 border-t border-white/5">
-          <div className="flex items-center gap-3 px-2 py-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-inner">
-              IS
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Isko Admin</p>
-              <p className="text-[10px] text-gray-500 truncate">Pro Plan</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col bg-[#0a0a0c] relative">

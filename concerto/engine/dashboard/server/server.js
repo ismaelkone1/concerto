@@ -212,6 +212,52 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // ─── GIT ACTIONS ──────────────────────────────────────────────────────────
+  if (url === '/api/git/commit' && req.method === 'POST') {
+    const { message } = await parseBody(req);
+    if (!message) return json(res, { error: 'Message is required' }, 400);
+    const r = await run(`git add . && git commit -m "${message.replace(/"/g, '\\"')}"`);
+    return json(res, { success: r.ok, out: r.out, err: r.err });
+  }
+
+  if (url === '/api/git/push' && req.method === 'POST') {
+    const r = await run('git push');
+    return json(res, { success: r.ok, out: r.out, err: r.err });
+  }
+
+  if (url === '/api/git/pull' && req.method === 'POST') {
+    const r = await run('git pull');
+    return json(res, { success: r.ok, out: r.out, err: r.err });
+  }
+
+  // ─── TASKS / SPECIFICATIONS ───────────────────────────────────────────────
+  if (url === '/api/tasks') {
+    const trackingPath = path.join(ROOT, 'concerto-config/spec/TRACKING.md');
+    if (!fs.existsSync(trackingPath)) return json(res, { error: 'TRACKING.md not found' }, 404);
+
+    const content = fs.readFileSync(trackingPath, 'utf8');
+    const tasks = [];
+    
+    // Simple table parser for SPEC-XXX
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const match = line.match(/^\|\s*(SPEC-\d+)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/);
+      if (match) {
+        tasks.push({
+          id: match[1].trim(),
+          title: match[2].trim(),
+          phase: match[3].trim(),
+          status: match[4].trim().replace(/^[^\s]+\s+/, ''), // Strip emoji if present
+          progress: parseInt(match[5].trim()) || 0,
+          owner: match[6].trim(),
+          start: match[7].trim(),
+          due: match[8].trim()
+        });
+      }
+    }
+    return json(res, tasks);
+  }
+
   // ─── PROJECT STATS ─────────────────────────────────────────────────────────
   if (url === '/api/stats') {
     const [ts, tsx, js, php, yaml] = await Promise.all([

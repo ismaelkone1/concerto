@@ -47,7 +47,11 @@ export default function ConfigurationPage() {
     setLoading(true);
     try {
       const response = await fetch(`/api/config/${type}`);
-      if (!response.ok) throw new Error(`Failed to load ${type}`);
+      if (!response.ok) {
+        console.warn(`Could not load ${type}: ${response.statusText}`);
+        setItems([]);
+        return;
+      }
       const data = await response.json();
       setItems(data || []);
     } catch (err) {

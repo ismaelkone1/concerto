@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   ]);
 
   // Si on est sur le launcher, on n'affiche pas le layout de dashboard
-  const isLauncher = pathname === '/';
+  const isLauncherOrTemplates = pathname === '/' || pathname === '/templates';
 
   // Synchroniser l'état de la phase avec l'URL
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
 
 
-  if (isLauncher) {
+  if (isLauncherOrTemplates) {
     return <>{children}</>;
   }
 

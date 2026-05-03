@@ -12,28 +12,90 @@ import {
   Activity,
   Code
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import GitStatusCard from '@/components/GitStatusCard';
+
+interface Task {
+  id: string;
+  title: string;
+  phase: string;
+  status: string;
+  progress: number;
+}
 
 export default function DevPage() {
   const [isRunning, setIsRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [logs, setLogs] = useState<string[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+  const [stats, setStats] = useState({ files: 0, tests: 0 });
 
-  const toggleExecution = () => {
-    setIsRunning(!isRunning);
-    if (!isRunning) {
-      // Simulation progression
-      const interval = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) {
-            clearInterval(interval);
-            setIsRunning(false);
-            return 100;
-          }
-          return p + 5;
-        });
-      }, 1000);
+  const fetchTasks = async () => {
+    try {
+      const res = await fetch('http://localhost:3500/api/tasks');
+      const data = await res.json();
+      setTasks(data);
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
     }
   };
+
+  const fetchStats = async () => {
+     try {
+       const [statsRes, testRes] = await Promise.all([
+         fetch('http://localhost:3500/api/stats'),
+         fetch('http://localhost:3500/api/tests')
+       ]);
+       const statsData = await statsRes.json();
+       const testData = await testRes.json();
+       setStats({ 
+         files: statsData.ts + statsData.tsx + statsData.js, 
+         tests: testData.unit.files + testData.e2e.files 
+       });
+     } catch (err) {}
+  };
+
+  useEffect(() => {
+    fetchTasks();
+    fetchStats();
+    
+    // SSE for Logs
+    const eventSource = new EventSource('http://localhost:3500/logs');
+    eventSource.onmessage = (event) => {
+      try {
+        const rawLogs = JSON.parse(event.data);
+        const logLines = rawLogs.split('\n').filter(Boolean);
+        setLogs(logLines);
+      } catch (err) {}
+    };
+
+    return () => eventSource.close();
+  }, []);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  const toggleExecution = async () => {
+    const action = isRunning ? 'STOP' : 'START';
+    try {
+      const projectId = localStorage.getItem('activeProjectId') || 'concerto-core';
+      const res = await fetch('http://localhost:3500/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, projectId })
+      });
+      if (res.ok) {
+        setIsRunning(!isRunning);
+      }
+    } catch (err) {
+      alert('Error triggering orchestrator');
+    }
+  };
+
+  const globalProgress = tasks.length > 0 
+    ? Math.round(tasks.reduce((acc, t) => acc + (t.progress || 0), 0) / tasks.length)
+    : 0;
 
   return (
     <div className="h-full p-6 space-y-6 flex flex-col animate-in slide-in-from-bottom-2 duration-500">
@@ -65,51 +127,51 @@ export default function DevPage() {
       </div>
 
       <div className="flex-1 grid grid-cols-12 gap-6 min-h-0">
-        {/* Left: Active Tasks & Progress */}
+        {/* Left: Git Status & Tasks */}
         <div className="col-span-4 space-y-6 flex flex-col min-h-0">
-          <div className="bg-[#0d0d0f]/50 border border-white/5 rounded-2xl p-6 space-y-6">
+          <GitStatusCard />
+
+          <div className="bg-[#0d0d0f]/50 border border-white/5 rounded-2xl p-6 space-y-4">
             <div>
               <div className="flex justify-between items-end mb-2">
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Global Build Progress</span>
-                <span className="text-xl font-black text-white">{progress}%</span>
+                <span className="text-xl font-black text-white">{globalProgress}%</span>
               </div>
               <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
                 <div 
                   className="h-full bg-gradient-to-r from-yellow-500 to-amber-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${globalProgress}%` }}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl">
-                  <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Files Created</div>
-                  <div className="text-2xl font-bold text-white">42</div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Project Files</div>
+                  <div className="text-2xl font-bold text-white">{stats.files}</div>
                </div>
                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl">
-                  <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Unit Tests</div>
-                  <div className="text-2xl font-bold text-emerald-400">18</div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Tests</div>
+                  <div className="text-2xl font-bold text-emerald-400">{stats.tests}</div>
                </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-[#0d0d0f]/50 border border-white/5 rounded-2xl p-6 min-h-0">
+          <div className="flex-1 overflow-y-auto bg-[#0d0d0f]/50 border border-white/5 rounded-2xl p-6 min-h-0 custom-scrollbar">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Implementation Queue</h3>
             <div className="space-y-3">
-              {[
-                { id: 'SPEC-001', title: 'Auth Service', status: 'done' },
-                { id: 'SPEC-002', title: 'Data Pipeline', status: 'inprogress' },
-                { id: 'SPEC-003', title: 'API Gateway', status: 'pending' },
-                { id: 'SPEC-004', title: 'Dashboard UI', status: 'pending' },
-              ].map((task, i) => (
+              {tasks.length === 0 ? (
+                 <div className="text-center py-8 text-gray-600 text-xs italic">No active specifications</div>
+              ) : tasks.map((task, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
-                  {task.status === 'done' ? <CheckCircle2 size={16} className="text-emerald-500" /> : 
-                   task.status === 'inprogress' ? <Activity size={16} className="text-yellow-400 animate-pulse" /> :
+                  {task.status === 'completed' ? <CheckCircle2 size={16} className="text-emerald-500" /> : 
+                   task.status === 'in-progress' ? <Activity size={16} className="text-yellow-400 animate-pulse" /> :
                    <Clock size={16} className="text-gray-600" />}
                   <div className="flex-1">
                     <div className="text-[10px] font-mono text-blue-400 font-bold">{task.id}</div>
                     <div className="text-sm font-medium text-gray-300">{task.title}</div>
                   </div>
+                  <div className="text-[10px] font-bold text-gray-600">{task.progress}%</div>
                 </div>
               ))}
             </div>
@@ -130,15 +192,17 @@ export default function DevPage() {
                 <div className="w-2 h-2 rounded-full bg-emerald-500/50" />
               </div>
             </div>
-            <div className="flex-1 p-4 font-mono text-xs text-gray-400 overflow-y-auto space-y-2">
-              <p className="text-blue-400">[{new Date().toLocaleTimeString()}] conductor: Initializing development maestro...</p>
-              <p className="text-dim">[{new Date().toLocaleTimeString()}] git: Checked out branch dev-SPEC-002</p>
-              <p className="text-emerald-400">[{new Date().toLocaleTimeString()}] be-dev: Analyzing SPEC-002 constraints</p>
-              <p className="text-emerald-400">[{new Date().toLocaleTimeString()}] be-dev: Writing file engine/src/pipeline.ts</p>
-              <p className="text-dim">[{new Date().toLocaleTimeString()}] be-dev: Running tsc --noEmit</p>
-              {isRunning && (
-                <p className="text-emerald-400 animate-pulse">[{new Date().toLocaleTimeString()}] be-dev: Generating logic for data transformation...</p>
-              )}
+            <div className="flex-1 p-4 font-mono text-xs text-gray-400 overflow-y-auto space-y-1 custom-scrollbar">
+              {logs.length === 0 ? (
+                <p className="text-gray-700 italic">Waiting for orchestrator activity...</p>
+              ) : logs.map((log, i) => {
+                const color = log.includes('❌') ? 'text-red-400' : 
+                             log.includes('✅') || log.includes('🎉') ? 'text-emerald-400' :
+                             log.includes('──') ? 'text-blue-400 font-bold mt-2' :
+                             log.includes('🎻') || log.includes('🎹') ? 'text-purple-400' : 'text-gray-400';
+                return <p key={i} className={color}>{log}</p>;
+              })}
+              <div ref={logEndRef} />
             </div>
           </div>
 
@@ -146,14 +210,16 @@ export default function DevPage() {
             <div className="relative z-10 flex items-center gap-6">
                <div className="w-20 h-20 rounded-3xl bg-blue-500/10 border-2 border-blue-500/20 flex items-center justify-center relative shadow-2xl shadow-blue-500/20">
                   <Code size={40} className="text-blue-400" />
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0d0d0f] animate-pulse" />
+                  <div className={`absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0d0d0f] ${isRunning ? 'animate-pulse' : ''}`} />
                </div>
                <div>
-                  <h4 className="text-xl font-bold text-white mb-1">Backend Maestro</h4>
-                  <p className="text-gray-400 text-sm">Expert TypeScript & Node.js Architecture</p>
+                  <h4 className="text-xl font-bold text-white mb-1">Development Maestro</h4>
+                  <p className="text-gray-400 text-sm">Expert Orchestration & System Design</p>
                   <div className="mt-3 flex gap-2">
-                     <span className="px-2 py-1 bg-white/5 rounded text-[8px] font-bold uppercase text-gray-500">Writing file</span>
-                     <span className="px-2 py-1 bg-blue-500/10 rounded text-[8px] font-bold uppercase text-blue-400 truncate max-w-[200px]">src/services/auth.ts</span>
+                     <span className="px-2 py-1 bg-white/5 rounded text-[8px] font-bold uppercase text-gray-500">Status</span>
+                     <span className={`px-2 py-1 rounded text-[8px] font-bold uppercase ${isRunning ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                        {isRunning ? 'Active' : 'Idle'}
+                     </span>
                   </div>
                </div>
             </div>
@@ -162,13 +228,12 @@ export default function DevPage() {
                <div className="flex flex-col items-end gap-1">
                   <div className="flex gap-0.5">
                      {[...Array(12)].map((_, i) => (
-                       <div key={i} className={`h-4 w-1 rounded-full ${i < 8 ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-white/5'}`} />
+                       <div key={i} className={`h-4 w-1 rounded-full ${isRunning && i < 8 ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-white/5'}`} />
                      ))}
                   </div>
-                  <span className="text-sm font-bold text-blue-400">72% Optimized</span>
+                  <span className="text-sm font-bold text-blue-400">{isRunning ? '72% Optimized' : '0%'}</span>
                </div>
             </div>
-            {/* Background elements */}
             <Layers className="absolute -bottom-10 -right-10 w-48 h-48 text-white/[0.02] group-hover:text-blue-500/[0.03] transition-colors" />
             <Cpu className="absolute -top-10 -left-10 w-48 h-48 text-white/[0.02] group-hover:text-blue-500/[0.03] transition-colors" />
           </div>
@@ -177,3 +242,4 @@ export default function DevPage() {
     </div>
   );
 }
+
