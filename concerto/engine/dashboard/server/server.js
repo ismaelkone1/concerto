@@ -386,6 +386,18 @@ const server = http.createServer(async (req, res) => {
     const projectId = match ? match[1] : null;
 
     try {
+      // POST import project (Check this FIRST)
+      if (req.method === 'POST' && (projectId === 'import' || url === '/api/projects/import')) {
+        try {
+          const { path: projectPath } = await parseBody(req);
+          const project = ProjectManager.importProject(projectPath);
+          return json(res, project, 200);
+        } catch (err) {
+          console.error('Project import error:', err.message);
+          return json(res, { error: err.message }, 400);
+        }
+      }
+
       // GET list all projects
       if (req.method === 'GET' && !projectId) {
         const projects = ProjectManager.getAllProjects();

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Rocket,
+  Music,
   Plus, 
   Clock, 
   Layout, 
@@ -13,7 +13,6 @@ import {
   Trash2
 } from 'lucide-react';
 import { apiService } from '@/lib/api';
-import Sidebar from './Sidebar';
 
 interface Project {
   id: string;
@@ -70,24 +69,24 @@ export default function Launchpad() {
       <div className="flex items-center justify-center min-h-screen bg-[#0a0a0c]">
         <div className="relative" suppressHydrationWarning>
           <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-          <Rocket className="absolute inset-0 m-auto w-6 h-6 text-blue-400" />
+          <Music className="absolute inset-0 m-auto w-6 h-6 text-blue-400" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#0a0a0c] text-white overflow-hidden">
-      <Sidebar />
-
-      {/* Main Content */}
       <main className="flex-1 flex flex-col bg-[#0a0a0c] relative">
         {/* Header */}
         <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-10">
-          <h2 className="text-xl font-semibold">Launcher</h2>
-          
           <div className="flex items-center gap-4">
-            <div className="relative group">
+             <h2 className="text-xl font-semibold">Launcher</h2>
+             <div className="h-4 w-px bg-white/10" />
+             <p className="text-xs text-gray-500 font-medium">Orchestrate your autonomous projects</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="relative group mr-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
               <input 
                 type="text"
@@ -97,6 +96,24 @@ export default function Launchpad() {
                 className="pl-10 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 w-64 transition-all"
               />
             </div>
+            <button 
+              onClick={async () => {
+                const res = await apiService.openSystemDialog();
+                if (!res.cancelled && res.path) {
+                  try {
+                    const project = await apiService.importProject(res.path);
+                    localStorage.setItem('activeProjectId', project.id);
+                    router.push(`/conception?projectId=${project.id}`);
+                  } catch (err: any) {
+                    alert(err.message);
+                  }
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-semibold rounded-lg transition-all"
+            >
+              <Music className="w-4 h-4 text-blue-400" />
+              Open Project
+            </button>
             <button 
               onClick={() => router.push('/onboarding')}
               className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-sm font-semibold rounded-lg transition-all shadow-lg shadow-blue-500/20"
@@ -158,7 +175,7 @@ export default function Launchpad() {
                       project.status === 'building' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 
                       'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                     }`}>
-                      {project.status.replace('_', ' ')}
+                      {(project.status || 'awaiting_data').replace('_', ' ')}
                     </span>
                   </div>
 
@@ -199,7 +216,6 @@ export default function Launchpad() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </main>
   );
 }

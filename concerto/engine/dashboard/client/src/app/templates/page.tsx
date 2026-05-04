@@ -38,7 +38,7 @@ const TEMPLATES: Template[] = [
   { id: '8', name: 'Python Service Mesh', category: 'microservices', stack: 'FastAPI / gRPC / Redis', desc: 'High-performance Python services with gRPC communication.', complexity: 'High', rating: 4.7 },
 ];
 
-import Sidebar from '@/components/Sidebar';
+
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -51,9 +51,6 @@ export default function TemplatesPage() {
   );
 
   return (
-    <div className="flex h-screen bg-[#0a0a0c] text-white overflow-hidden">
-      <Sidebar />
-
       <main className="flex-1 flex flex-col bg-[#0a0a0c] relative">
         {/* Header matching Launchpad styling */}
         <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-10">
@@ -142,6 +139,5 @@ export default function TemplatesPage() {
            </div>
         </div>
       </main>
-    </div>
   );
 }

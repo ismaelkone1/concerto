@@ -3,6 +3,10 @@
 :root {
   --background: #0a0a0c;
   --foreground: #ededed;
+  --blue-rgb: 37, 99, 235;
+  --purple-rgb: 147, 51, 234;
+  --emerald-rgb: 16, 185, 129;
+  --amber-rgb: 245, 158, 11;
 }
 
 @theme inline {
@@ -16,21 +20,27 @@ body {
   overflow: hidden;
 }
 
-/* Custom Scrollbars */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.1);
+/* Global Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
 
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hide scrollbar for specific elements if needed */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }

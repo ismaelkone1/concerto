@@ -14,7 +14,15 @@ interface Message {
   timestamp: Date;
 }
 
-export default function ConceptionChat({ projectId: propProjectId }: { projectId?: string }) {
+export default function ConceptionChat({ 
+  projectId: propProjectId,
+  onFocusChange,
+  onDiagramUpdate
+}: { 
+  projectId?: string,
+  onFocusChange?: (mode: 'global' | 'back' | 'front' | 'db') => void,
+  onDiagramUpdate?: (chart: string) => void
+}) {
   const searchParams = useSearchParams();
   const projectId = propProjectId || searchParams.get('projectId') || 'unknown';
   
@@ -22,13 +30,16 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
     {
       id: '1',
       role: 'assistant',
-      content: "### 🎼 Concerto Architecture Workbench\nI am the **Lead Architect**. My goal is to eliminate every shadow area in your project before orchestration. \n\nUse technical commands to focus our session:\n- `/back` : Backend & Services\n- `/front` : UI & State Management\n- `/db` : Data persistence\n\nWhere shall we begin our technical deep-dive?",
+      content: "### 🎼 Concerto Architecture Workbench\nI am the **Lead Architect**. My goal is to eliminate every shadow area in your project before orchestration. \n\nUse technical commands to focus our session:\n- `/back` : **Backend & Services** (Purple Mode)\n- `/front` : **UI & State Management** (Emerald Mode)\n- `/db` : **Data persistence** (Amber Mode)\n\nWhere shall we begin our technical deep-dive?",
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [showCommands, setShowCommands] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [currentFocus, setCurrentFocus] = useState<'global' | 'back' | 'front' | 'db'>('global');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFiles, setAttachedFiles] = useState<{ name: string, content: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,24 +48,77 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
     }
   }, [messages, isTyping]);
 
+  const updateFocus = (content: string) => {
+    let newFocus: 'global' | 'back' | 'front' | 'db' = 'global';
+    if (content.includes('/back')) newFocus = 'back';
+    else if (content.includes('/front')) newFocus = 'front';
+    else if (content.includes('/db')) newFocus = 'db';
+    
+    if (newFocus !== currentFocus) {
+      setCurrentFocus(newFocus);
+      onFocusChange?.(newFocus);
+    }
+  };
+
+  useEffect(() => {
+    if (input.startsWith('/')) {
+      updateFocus(input);
+    }
+  }, [input]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles = await Promise.all(Array.from(files).map(async file => {
+      try {
+        const content = await file.text();
+        return { name: file.name, content };
+      } catch (err) {
+        console.error('Error reading file:', file.name);
+        return null;
+      }
+    }));
+
+    setAttachedFiles(prev => [...prev, ...(newFiles.filter(Boolean) as { name: string, content: string }[])]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const focusColors = {
+    global: 'blue',
+    back: 'purple',
+    front: 'emerald',
+    db: 'amber'
+  };
+  const activeColor = focusColors[currentFocus];
+
   const handleSend = async (customContent?: string) => {
     const contentToSend = customContent || input;
-    if (!contentToSend.trim()) return;
+    if (!contentToSend.trim() && attachedFiles.length === 0) return;
+
+    updateFocus(contentToSend);
+
+    let finalContent = contentToSend;
+    if (attachedFiles.length > 0) {
+      finalContent += "\n\n### 📁 ATTACHED CONTEXT:\n" + 
+        attachedFiles.map(f => `**File: ${f.name}**\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n');
+    }
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: contentToSend,
+      content: finalContent,
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMsg]);
     if (!customContent) setInput('');
+    setAttachedFiles([]); // Clear files after send
     setIsTyping(true);
 
     try {
       const chatMessages = messages.map(m => ({ role: m.role, content: m.content }));
-      chatMessages.push({ role: 'user', content: contentToSend });
+      chatMessages.push({ role: 'user', content: finalContent });
       
       const response = await apiService.chat(projectId, chatMessages);
       
@@ -65,6 +129,12 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
         timestamp: new Date()
       };
       setMessages(prev => [...prev, assistantMsg]);
+
+      // Extract Mermaid if present
+      const mermaidMatch = response.content.match(/```mermaid\n([\s\S]*?)\n```/);
+      if (mermaidMatch && onDiagramUpdate) {
+        onDiagramUpdate(mermaidMatch[1]);
+      }
     } catch (err) {
       console.error('Chat error:', err);
       const errorMsg: Message = {
@@ -107,9 +177,6 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
              <Sparkles size={12} />
              Calibrate
            </button>
-           <button className="p-2 hover:bg-white/5 rounded-lg text-gray-400 transition-colors">
-             <Command size={16} />
-           </button>
         </div>
       </div>
 
@@ -149,8 +216,19 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
                     code: ({node, ...props}) => <code className="bg-black/40 px-1.5 py-0.5 rounded font-mono text-[11px] text-emerald-400" {...props} />
                   }}
                 >
-                  {msg.content.replace(/<function_calls>[\s\S]*?<\/function_calls>/g, '').trim()}
+                  {msg.content.replace(/### 📁 ATTACHED CONTEXT:[\s\S]*$/, '').replace(/<function_calls>[\s\S]*?<\/function_calls>/g, '').trim()}
                 </ReactMarkdown>
+                {msg.content.includes('### 📁 ATTACHED CONTEXT:') && (
+                  <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap gap-2">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 w-full mb-1">Attached Context:</span>
+                    {msg.content.match(/\*\*File: (.*?)\*\*/g)?.map((fileMatch, idx) => (
+                      <div key={idx} className="bg-white/5 px-2 py-1 rounded-md text-[10px] text-blue-300 border border-white/5 flex items-center gap-1.5">
+                        <Paperclip size={10} />
+                        {fileMatch.replace(/\*\*File: (.*?)\*\*/, '$1')}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest opacity-60">
                 {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -174,7 +252,34 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
 
       {/* Input */}
       <div className="p-4 bg-[#0a0a0c] border-t border-white/5">
+        {/* File Preview */}
+        {attachedFiles.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2 animate-in slide-in-from-bottom-2 duration-300">
+            {attachedFiles.map((file, idx) => (
+              <div key={idx} className={`bg-${activeColor}-600/10 border border-${activeColor}-500/20 rounded-lg px-3 py-1.5 flex items-center gap-3 group`}>
+                <div className="flex items-center gap-2">
+                   <Paperclip size={12} className={`text-${activeColor}-400`} />
+                   <span className={`text-[11px] font-medium text-${activeColor}-300`}>{file.name}</span>
+                </div>
+                <button 
+                  onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
+                  className={`w-4 h-4 rounded-full bg-${activeColor}-500/20 flex items-center justify-center text-${activeColor}-400 hover:bg-red-500/20 hover:text-red-400 transition-colors`}
+                >
+                  <span className="text-xs font-bold leading-none">&times;</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="relative group">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            multiple 
+            className="hidden" 
+          />
           <textarea
             value={input}
             onChange={(e) => {
@@ -189,7 +294,7 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
               }
             }}
             placeholder="Type a message or /command..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all resize-none h-12 scrollbar-none"
+            className={`w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-${activeColor}-500/50 focus:ring-1 focus:ring-${activeColor}-500/50 transition-all resize-none h-12 scrollbar-none`}
           />
           
           {showCommands && (
@@ -216,14 +321,17 @@ export default function ConceptionChat({ projectId: propProjectId }: { projectId
             </div>
           )}
           <div className="absolute right-2 bottom-2 flex items-center gap-1">
-            <button className="p-1.5 text-gray-500 hover:text-white transition-colors">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-1.5 transition-colors ${attachedFiles.length > 0 ? `text-${activeColor}-400 hover:text-${activeColor}-300` : 'text-gray-500 hover:text-white'}`}
+            >
               <Paperclip size={16} />
             </button>
             <button 
               onClick={() => handleSend()}
-              className="p-1.5 bg-blue-600 hover:bg-blue-50 text-blue rounded-lg transition-colors group-hover:bg-blue-500"
+              className={`p-1.5 bg-${activeColor}-600 hover:bg-${activeColor}-500 text-white rounded-lg transition-colors shadow-lg shadow-${activeColor}-600/20`}
             >
-              <Send size={16} className="text-white" />
+              <Send size={16} />
             </button>
           </div>
         </div>

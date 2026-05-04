@@ -3,7 +3,7 @@ const API_BASE = 'http://localhost:3500';
 export const apiService = {
   async getProjects() {
     try {
-      const res = await fetch(`${API_BASE}/api/projects`);
+      const res = await fetch(`${API_BASE}/api/projects`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch projects');
       return await res.json();
     } catch (error) {
@@ -26,6 +26,24 @@ export const apiService = {
       return await res.json();
     } catch (error) {
       console.error('Create project error:', error);
+      throw error;
+    }
+  },
+
+  async importProject(path: string) {
+    try {
+      const res = await fetch(`${API_BASE}/api/projects/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to import project');
+      }
+      return await res.json();
+    } catch (error) {
+      console.error('Import project error:', error);
       throw error;
     }
   },
@@ -121,9 +139,12 @@ export const apiService = {
   async getProjectPrompts(projectId: string, phase: string) {
     try {
       const res = await fetch(`${API_BASE}/api/projects/${projectId}/prompts/${phase}`);
+      if (res.status === 404) return [];
       if (!res.ok) throw new Error('Failed to fetch project prompts');
       return await res.json();
     } catch (error) {
+      // Only log unexpected errors
+      if (error instanceof Error && error.message.includes('404')) return [];
       console.error('Project prompts error:', error);
       return [];
     }
@@ -132,10 +153,10 @@ export const apiService = {
   async getProjectPrompt(projectId: string, phase: string, filename: string) {
     try {
       const res = await fetch(`${API_BASE}/api/projects/${projectId}/prompts/${phase}/${filename}`);
+      if (res.status === 404) return '';
       if (!res.ok) throw new Error('Failed to fetch project prompt content');
       return await res.text();
     } catch (error) {
-      console.error('Project prompt content error:', error);
       return '';
     }
   },
@@ -158,10 +179,10 @@ export const apiService = {
   async getRoadmap(projectId: string) {
     try {
       const res = await fetch(`${API_BASE}/api/roadmap?projectId=${projectId}`);
+      if (res.status === 404) return [];
       if (!res.ok) throw new Error('Failed to fetch roadmap');
       return await res.json();
     } catch (error) {
-      console.error('Roadmap error:', error);
       return [];
     }
   },
@@ -169,10 +190,10 @@ export const apiService = {
   async getGit() {
     try {
       const res = await fetch(`${API_BASE}/api/git`);
+      if (res.status === 404) return { branch: 'unknown', changes: [], commits: [] };
       if (!res.ok) throw new Error('Failed to fetch git');
       return await res.json();
     } catch (error) {
-      console.error('Git error:', error);
       return { branch: 'unknown', changes: [], commits: [] };
     }
   },
@@ -180,10 +201,10 @@ export const apiService = {
   async getStats() {
     try {
       const res = await fetch(`${API_BASE}/api/stats`);
+      if (res.status === 404) return {};
       if (!res.ok) throw new Error('Failed to fetch stats');
       return await res.json();
     } catch (error) {
-      console.error('Stats error:', error);
       return {};
     }
   },
@@ -191,10 +212,10 @@ export const apiService = {
   async getDocker() {
     try {
       const res = await fetch(`${API_BASE}/api/docker`);
+      if (res.status === 404) return [];
       if (!res.ok) throw new Error('Failed to fetch docker');
       return await res.json();
     } catch (error) {
-      console.error('Docker error:', error);
       return [];
     }
   },
@@ -202,10 +223,10 @@ export const apiService = {
   async getTests() {
     try {
       const res = await fetch(`${API_BASE}/api/tests`);
+      if (res.status === 404) return {};
       if (!res.ok) throw new Error('Failed to fetch tests');
       return await res.json();
     } catch (error) {
-      console.error('Tests error:', error);
       return {};
     }
   },
@@ -213,10 +234,10 @@ export const apiService = {
   async getSecurity() {
     try {
       const res = await fetch(`${API_BASE}/api/security`);
+      if (res.status === 404) return { keys: [] };
       if (!res.ok) throw new Error('Failed to fetch security');
       return await res.json();
     } catch (error) {
-      console.error('Security error:', error);
       return { keys: [] };
     }
   },
